@@ -17,14 +17,14 @@
 #include "TF1.h"
 #include "TCanvas.h"
 
-#include "include/Event.hh"
+#include "Event.hh"
 #include <iostream>
 #include <vector>
 #include <map>
 //#include <fstream>
-#include "include/DmpEvtBTAnc.h"
-#include "include/DmpEvtBgoHits.h"
-#include "include/DmpEvtHeader.h"
+#include "DmpEvtBTAnc.h"
+#include "DmpEvtBgoHits.h"
+#include "DmpEvtHeader.h"
 
 #define NLadder 5
 #define AMSTreeName "t4"
@@ -62,7 +62,7 @@ namespace EnableCut{
 // *
 // *  TODO:  how to set cut as gSytle->SetOptxx(011011011)?
 // *
-    int defaultCut=1000000;  // order: refer to namespace EnableCut, from up to down
+    //int defaultCut=1000000;  // order: refer to namespace EnableCut, from up to down
     st += 0;
   }
 
@@ -361,6 +361,7 @@ bool AMSSPS(TString f0="run_1416155587_ANC_387.root",TString f1="run_1416155589_
   delete event_01;
   delete event_s0;
   delete event_s1;
+  return true;
 }
 
 //-------------------------------------------------------------------
@@ -406,9 +407,11 @@ bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141115_131911_Hits.root",
   tree_s2->SetBranchAddress("EventHeader",&event_Header);
 
 //-------------------------------------------------------------------
-  TString name = MyPath+"/ALL/Combine_"+file_s2;
+  file_s2.Remove(0,9);
+  file_s2.Replace(file_s2.Length()-9,4,"Rec0");
+  TString name = MyPath+"/ALL/DAMPE_AMS_ANC_"+file_s2;
   TFile *f_out = new TFile(name,"RECREATE");
-  TTree *tree_out = new TTree("/Event/Rec0","Rec0");
+  TTree *tree_out = new TTree("Rec0","Rec0");
   tree_out->SetAutoSave(50000000);
 
   //output
@@ -419,7 +422,9 @@ bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141115_131911_Hits.root",
   tree_out->Branch("Header",evt_Header->GetName(),&evt_Header,32000,2);
   tree_out->Branch("Bgo",evt_Bgo->GetName(),&evt_Bgo,32000,2);
   tree_out->Branch("Psd",evt_Psd->GetName(),&evt_Psd,32000,2);
+  //tree_out->Branch("Anc",evt_Anc->fAMSCls,32000,2);
   tree_out->Branch("Anc",evt_Anc->GetName(),&evt_Anc,32000,2);
+  //tree_out->Branch(AMSBranchName,&event_AMS,32000,2);
 
   // event loop, combine DAMPE, AMS, ANC
   Conf::entries = tree_s2->GetEntries();
@@ -428,12 +433,38 @@ bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141115_131911_Hits.root",
     tree_s0->GetEntry(Conf::evtID);
     tree_s1->GetEntry(Conf::evtID);
     tree_s2->GetEntry(Conf::evtID);
-    int nC = event_s0->Cls->GetEntriesFast();
-    for(int ic=0;ic<nC;++ic){
-      const Cluster* cl = event_s0->GetCluster(ic);
-      event_01->AddCluster(cl);
+    evt_Header->LoadFrom(event_Header);
+    evt_Bgo->LoadFrom(event_BgoHits);
+    evt_Psd->LoadFrom(event_PsdHits);
+    /*
+    cout<<" i = "<<Conf::evtID<<endl;
+    int nC = event_AMS->Cls->GetEntriesFast();
+    for(int xx=0;xx<nC;++xx){
+      const Cluster *in = (Cluster*) event_AMS->Cls->At(xx);
+      Cluster *out_Cls = (Cluster*)evt_Anc->fAMSCls->New(xx);
+      out_Cls->LoadFrom(in);
+      out_Cls->ladder = LadderInOrder(out_Cls->ladder);
+      cout<<"  "<<out_Cls->ladder;
     }
-    tree_01->Fill();
+    cout<<endl;
+    */
+    evt_Anc->fAMSCls->AbsorbObjects(event_AMS->Cls);
+    //evt_Anc->fAMSCls = (TClonesArray*)event_AMS->Cls->Clone();
+    int ClsSize = evt_Anc->fAMSCls->GetEntriesFast();
+    for(int xx=0;xx<ClsSize;++xx){
+      Cluster *aC = (Cluster*)evt_Anc->fAMSCls->At(xx);
+      aC->ladder = LadderInOrder(aC->ladder);
+    }
+    evt_Anc->fAdcC1 = V792[0][1];
+    evt_Anc->fAdcC2 = V792[0][9];
+    evt_Anc->fAdcPbGlass = V792[0][3];
+    evt_Anc->fAdcSc1 = V792[0][4];
+    evt_Anc->fAdcSc2 = V792[0][5];
+    evt_Anc->fAdcSc3 = V792[0][8];
+    evt_Anc->fAdcSc4 = V792[0][7];
+    evt_Anc->fAdcSd1 = V792[0][11];
+    evt_Anc->fAdcSd2 = V792[0][12];
+    tree_out->Fill();
     evt_Header->Reset();
     evt_Bgo->Reset();
     evt_Psd->Reset();
@@ -451,6 +482,7 @@ bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141115_131911_Hits.root",
   delete event_Header;
   delete event_BgoHits;
   delete event_PsdHits;
+  return true;
 }
 
 };
@@ -562,7 +594,7 @@ namespace Alignment{
     gStyle->SetOptStat(1111);
     gStyle->SetOptFit(100111);
 
-    TH1F *h_align_CoG[NLadder][3] = {0};  // cluster numbers, 0: s-side, 1: k-side-sensor0, 2: k-side-sensor-1
+    TH1F *h_align_CoG[NLadder][3] = {{0}};  // cluster numbers, 0: s-side, 1: k-side-sensor0, 2: k-side-sensor-1
     h_align_CoG[0][0] = new TH1F("L0_S0 Reference Position","L0_S0 Reference Position",1500,0,10);
     h_align_CoG[0][1] = new TH1F("L0_S1_0 Reference Position","L0_S1 Reference Position",1500,0,10);
     h_align_CoG[0][2] = new TH1F("L0_S1_1 Reference Position","L0_S1 Reference Position",1500,0,10);
@@ -572,7 +604,7 @@ namespace Alignment{
       h_align_CoG[i][2] = new TH1F(Form("L%d_S1_1 Offset",i),Form("L%d_S0 Offset",i),1000,-2.5,1.5);
     }
 
-    TH2F *h_offset_SeedAdd[NLadder][3] = {0};  // cluster numbers, 0: s-side, 1: k-side-sensor0, 2: k-side-sensor-1
+    TH2F *h_offset_SeedAdd[NLadder][3] = {{0}};  // cluster numbers, 0: s-side, 1: k-side-sensor0, 2: k-side-sensor-1
     for(short i =0;i<NLadder-1; ++i){
       h_offset_SeedAdd[i][0] = new TH2F(Form("L%d_S0 Offset_SeedAdd",i+1),  Form("L%d_S0 Offset_SeedAdd",i+1),640,0,640,1000,-2.5,1.5);
       h_offset_SeedAdd[i][1] = new TH2F(Form("L%d_S1_0 Offset_SeedAdd",i+1),Form("L%d_S1 Offset_SeedAdd",i+1),384,640,1024,1000,-2.5,1.5);
@@ -726,14 +758,14 @@ namespace Tracking{
     xPosi.clear();
     zPosi.clear();
     totSig.clear();
-    TH2F *track_xz = new TH2F(Form("Event%08d track_xz",Conf::evtID),Form("Event%08d track_xz",Conf::evtID),(Conf::ExHall*65+40),-10,Conf::ExHall*650+400,500,0,10);
+    TH2F *track_xz = new TH2F(Form("Event%09ld track_xz",Conf::evtID),Form("Event%09ld track_xz",Conf::evtID),(Conf::ExHall*65+40),-10,Conf::ExHall*650+400,500,0,10);
     if(trackID == 0){
       track_xz->SetTitle("Track X-Z");
       track_xz->SetXTitle("Z / cm");
       track_xz->SetYTitle("X / cm");
     }
     track_xz->SetMarkerSize(4);
-    for(short i=0;i<xClus.size();++i){
+    for(unsigned short i=0;i<xClus.size();++i){
       xPosi.push_back(GetPosition(xClus[i]));
       zPosi.push_back(Conf::Position_Z[Conf::ExHall][LadderInOrder(xClus[i]->ladder)]);
       totSig.push_back(xClus[i]->GetTotSig());
@@ -767,14 +799,14 @@ namespace Tracking{
     yPosi.clear();
     zPosi.clear();
     totSig.clear();
-    TH2F *track_yz = new TH2F(Form("Event%08d track_yz",Conf::evtID),Form("Event%08d track_yz",Conf::evtID),(Conf::ExHall*65+40),-10,Conf::ExHall*650+400,500,0,50);
+    TH2F *track_yz = new TH2F(Form("Event%09ld track_yz",Conf::evtID),Form("Event%09ld track_yz",Conf::evtID),(Conf::ExHall*65+40),-10,Conf::ExHall*650+400,500,0,50);
     if(trackID == 0){
       track_yz->SetTitle("Track Y-Z");
       track_yz->SetXTitle("Z / cm");
       track_yz->SetYTitle("Y / cm");
     }
     track_yz->SetMarkerSize(4);
-    for(short i=0;i<yClus.size();++i){
+    for(unsigned short i=0;i<yClus.size();++i){
       yPosi.push_back(GetPosition(yClus[i])); // back GetPos
       zPosi.push_back(Conf::Position_Z[Conf::ExHall][LadderInOrder(yClus[i]->ladder)]);
       totSig.push_back(yClus[i]->GetTotSig());
@@ -794,8 +826,8 @@ namespace Tracking{
   void Plots(long maxevt=999999999){
      Initi();
     // DX VS s-side strips
-    TH1F *h_p1[NLadder][2] = {0};  // linear fit parameter 1. 0: s-side, 1: k-side
-    TH1F *h_Dx_XPos[NLadder] = {0};  // 0: Dx VS s-side position.  Dx = hitted pos  - Fitted pos
+    //TH1F *h_p1[NLadder][2] = {{0}};  // linear fit parameter 1. 0: s-side, 1: k-side
+    //TH1F *h_Dx_XPos[NLadder] = {0};  // 0: Dx VS s-side position.  Dx = hitted pos  - Fitted pos
     
     for(Conf::evtID =0;(Conf::evtID<Conf::entries && Conf::evtID<maxevt);++Conf::evtID){
       LoadEvent();

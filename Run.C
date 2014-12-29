@@ -3,9 +3,13 @@
 
 void Run(){
   FileStat_t x;
-  TString libName = "libAMSAnalysis";
+  TString libName = "libMyAnalysis";
   if(gSystem->GetPathInfo(libName,x)){
-    gSystem->Load("$DMPSWWORK/lib/libDmpEvent.so");
+    //gROOT->ProcessLine(".include $DMPSWSYS/include"); // same as the next line
+    gInterpreter->AddIncludePath("$DMPSWSYS/include");
+    gSystem->Load("$DMPSWSYS/lib/libDmpEvent.so");
+    //gSystem->Load("$DMPSWWORK/lib/libDmpEvtAms.so");
+    //gSystem->Load("$DMPSWWORK/lib/libDmpEventRaw.so");
     gSystem->CompileMacro("./Analysis.C","k",libName);
   }else{
     gSystem->Load(libName);
