@@ -1,6 +1,5 @@
 >+
->+ input is the output of Perugia Decode package.
->+   only used for combining SPS 2 root file which from side_0 and side_1
+>+ input DAMPE_Bgo_hits, AMS root file from University Perugia, Ancillary root file from bari
 >+
 >+
 
@@ -11,9 +10,12 @@
 root -l  Run.C
 test()
 
-2.  Combine two sides file into one root (only for SPS)
+2.  Combine two sides file into one root (only for AMS SPS)
 root -l Run.C
 CombineData::AMSSPS("file_from_side0_run002","file_from_side1_run002");
+
+3. Combine DAMPE, AMS, ANC
+CombineData::DAMPE_AMS_ANC("file_DAMPE","file_AMS","file_ANC");
 
 
 >+
