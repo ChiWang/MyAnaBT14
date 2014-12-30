@@ -11,7 +11,7 @@
 root -l  Run.C
 test()
 
-3.  Combine two sides file into one root (only for SPS)
+2.  Combine two sides file into one root (only for SPS)
 root -l Run.C
 CombineData::AMSSPS("file_from_side0_run002","file_from_side1_run002");
 
