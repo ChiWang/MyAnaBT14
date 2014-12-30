@@ -8,6 +8,7 @@ void Run(){
     //gROOT->ProcessLine(".include $DMPSWSYS/include"); // same as the next line
     gInterpreter->AddIncludePath("$DMPSWSYS/include");
     gSystem->Load("$DMPSWSYS/lib/libDmpEvent.so");
+    //gSystem->Load("$DMPSWSYS/lib/libDmpKernel.so");
     //gSystem->Load("$DMPSWWORK/lib/libDmpEvtAms.so");
     //gSystem->Load("$DMPSWWORK/lib/libDmpEventRaw.so");
     gSystem->CompileMacro("./Analysis.C","k",libName);

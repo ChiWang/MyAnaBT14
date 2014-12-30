@@ -21,15 +21,20 @@
 #include <iostream>
 #include <vector>
 #include <map>
-//#include <fstream>
+#include <fstream>
+/*
 #include "DmpEvtBTAnc.h"
 #include "DmpEvtBgoHits.h"
 #include "DmpEvtHeader.h"
+*/
+#include "DmpEvtHeader.h"
+#include "DmpEvtNudHits.h"
+#include "DmpEvtRec0.h"
+//#include "DmpRoootIOSvc.h"
 
 #define NLadder 5
 #define AMSTreeName "t4"
 #define AMSBranchName "cluster_branch"
-
 #define ANCTreeName "AncillaryEvent"
 
 using namespace std;
@@ -66,6 +71,7 @@ namespace EnableCut{
     st += 0;
   }
 
+  ofstream logOut("test.log");
   TString Path = "./DATA/";
   short ExHall = SPS;// or PS
 // *
@@ -365,7 +371,8 @@ bool AMSSPS(TString f0="run_1416155587_ANC_387.root",TString f1="run_1416155589_
 }
 
 //-------------------------------------------------------------------
-bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141115_131911_Hits.root", TString file_name_AMS="Combine_run_1416053170_ANC_357.root", TString file_name_ANC="VMEAncillary_Data_357.root"){
+bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root", TString file_name_AMS="Combine_run_1416053170_ANC_357.root", TString file_name_ANC="VMEAncillary_Data_357.root"){
+//bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141115_131911_Hits.root", TString file_name_AMS="Combine_run_1416053170_ANC_357.root", TString file_name_ANC="VMEAncillary_Data_357.root"){
   file_s0 = file_name_AMS;
   file_s1 = file_name_ANC;
   file_s2 = file_name_DAMPE;
@@ -400,10 +407,12 @@ bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141115_131911_Hits.root",
   DmpEvtBgoHits *event_BgoHits = new DmpEvtBgoHits();
   DmpEvtPsdHits *event_PsdHits = new DmpEvtPsdHits();
   DmpEvtHeader *event_Header = new DmpEvtHeader();
+  DmpEvtNudHits *event_NudHits = new DmpEvtNudHits();
   tree_s0->SetBranchAddress(AMSBranchName,&event_AMS);
   tree_s1->SetBranchAddress("V792",V792);
   tree_s2->SetBranchAddress("Hits",&event_BgoHits);
   tree_s2->SetBranchAddress("PsdHits",&event_PsdHits);
+  tree_s2->SetBranchAddress("NudHits",&event_NudHits);
   tree_s2->SetBranchAddress("EventHeader",&event_Header);
 
 //-------------------------------------------------------------------
@@ -411,31 +420,37 @@ bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141115_131911_Hits.root",
   file_s2.Replace(file_s2.Length()-9,4,"Rec0");
   TString name = MyPath+"/ALL/DAMPE_AMS_ANC_"+file_s2;
   TFile *f_out = new TFile(name,"RECREATE");
-  TTree *tree_out = new TTree("Rec0","Rec0");
+  TTree *tree_out = new TTree("Event","Event");
   tree_out->SetAutoSave(50000000);
 
   //output
   DmpEvtHeader *evt_Header = new DmpEvtHeader();
+  tree_out->Branch("Header",evt_Header->GetName(),&evt_Header,32000,2);
+  DmpEvtRec0 *evt_Rec0 = new DmpEvtRec0();
+  tree_out->Branch("Rec0",evt_Rec0->GetName(),&evt_Rec0,32000,2);
+  /*
   DmpEvtBgoHits *evt_Bgo = new DmpEvtBgoHits();
   DmpEvtPsdHits *evt_Psd = new DmpEvtPsdHits();
   DmpEvtBTAnc *evt_Anc = new DmpEvtBTAnc();
-  tree_out->Branch("Header",evt_Header->GetName(),&evt_Header,32000,2);
   tree_out->Branch("Bgo",evt_Bgo->GetName(),&evt_Bgo,32000,2);
   tree_out->Branch("Psd",evt_Psd->GetName(),&evt_Psd,32000,2);
-  //tree_out->Branch("Anc",evt_Anc->fAMSCls,32000,2);
   tree_out->Branch("Anc",evt_Anc->GetName(),&evt_Anc,32000,2);
-  //tree_out->Branch(AMSBranchName,&event_AMS,32000,2);
+  */
 
   // event loop, combine DAMPE, AMS, ANC
   Conf::entries = tree_s2->GetEntries();
-  std::cout<<name<<"\tevents = "<<Conf::entries<<std::endl;
+  Conf::logOut<<name<<"\tevents = "<<Conf::entries<<std::endl;
+  cut<<name<<"\tevents = "<<Conf::entries<<std::endl;
   for(Conf::evtID = 0;Conf::evtID<Conf::entries;++Conf::evtID){
     tree_s0->GetEntry(Conf::evtID);
     tree_s1->GetEntry(Conf::evtID);
     tree_s2->GetEntry(Conf::evtID);
     evt_Header->LoadFrom(event_Header);
-    evt_Bgo->LoadFrom(event_BgoHits);
-    evt_Psd->LoadFrom(event_PsdHits);
+    evt_Rec0->Bgo->LoadFrom(event_BgoHits);
+    evt_Rec0->Psd->LoadFrom(event_PsdHits);
+    for(unsigned int iNud=0;iNud<4;++iNud){
+      evt_Rec0->Nud[iNud] = event_NudHits->fEnergy.at(iNud);
+    }
     /*
     cout<<" i = "<<Conf::evtID<<endl;
     int nC = event_AMS->Cls->GetEntriesFast();
@@ -448,27 +463,27 @@ bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141115_131911_Hits.root",
     }
     cout<<endl;
     */
-    evt_Anc->fAMSCls->AbsorbObjects(event_AMS->Cls);
+    evt_Rec0->Anc->fAMSCls->AbsorbObjects(event_AMS->Cls);
     //evt_Anc->fAMSCls = (TClonesArray*)event_AMS->Cls->Clone();
-    int ClsSize = evt_Anc->fAMSCls->GetEntriesFast();
+    int ClsSize = evt_Rec0->Anc->fAMSCls->GetEntriesFast();
     for(int xx=0;xx<ClsSize;++xx){
-      Cluster *aC = (Cluster*)evt_Anc->fAMSCls->At(xx);
+      Cluster *aC = (Cluster*)evt_Rec0->Anc->fAMSCls->At(xx);
       aC->ladder = LadderInOrder(aC->ladder);
     }
-    evt_Anc->fAdcC1 = V792[0][1];
-    evt_Anc->fAdcC2 = V792[0][9];
-    evt_Anc->fAdcPbGlass = V792[0][3];
-    evt_Anc->fAdcSc1 = V792[0][4];
-    evt_Anc->fAdcSc2 = V792[0][5];
-    evt_Anc->fAdcSc3 = V792[0][8];
-    evt_Anc->fAdcSc4 = V792[0][7];
-    evt_Anc->fAdcSd1 = V792[0][11];
-    evt_Anc->fAdcSd2 = V792[0][12];
+    evt_Rec0->Anc->fAdcC1 = V792[0][1];
+    evt_Rec0->Anc->fAdcC2 = V792[0][9];
+    evt_Rec0->Anc->fAdcPbGlass = V792[0][3];
+    evt_Rec0->Anc->fAdcSc1 = V792[0][4];
+    evt_Rec0->Anc->fAdcSc2 = V792[0][5];
+    evt_Rec0->Anc->fAdcSc3 = V792[0][8];
+    evt_Rec0->Anc->fAdcSc4 = V792[0][7];
+    evt_Rec0->Anc->fAdcSd1 = V792[0][11];
+    evt_Rec0->Anc->fAdcSd2 = V792[0][12];
     tree_out->Fill();
     evt_Header->Reset();
-    evt_Bgo->Reset();
-    evt_Psd->Reset();
-    evt_Anc->Reset();
+    evt_Rec0->Bgo->Reset();
+    evt_Rec0->Psd->Reset();
+    evt_Rec0->Anc->Reset();
   }
 
   tree_out->Write("",TObject::kOverwrite);
@@ -482,9 +497,10 @@ bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141115_131911_Hits.root",
   delete event_Header;
   delete event_BgoHits;
   delete event_PsdHits;
+  delete event_NudHits;
+  delete evt_Rec0;
   return true;
 }
-
 };
 
 //-------------------------------------------------------------------
