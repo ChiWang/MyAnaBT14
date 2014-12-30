@@ -5,15 +5,11 @@
 >+
 
 
-0.  Setup
-    0.  compile all event classes. install them into $DMPSWWORK/lib(include)
-            must Cluster.hh and Event.hh which created by University of Perugia.
-    1.  ln -s $DMPSWWORK/include ./
-
+0.  install DMPSW
 
 1.  run examples (after step 1)
 root -l  Run.C
-test(muon)
+test()
 
 3.  Combine two sides file into one root (only for SPS)
 root -l Run.C

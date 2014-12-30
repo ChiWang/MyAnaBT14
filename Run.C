@@ -29,13 +29,13 @@ void Load(short type, TString InFN="NO")
   TString f = "NO";
   switch (type){
     case electron:
-      f = "./Data/Root_Data/Combine_run_1416070809_ANC_366.root";
+      f = "./AMS/SPS/Combine_run_1416070809_ANC_366.root";
       break;
     case muon:
-      f = "./Data/Root_Data/Combine_run_1416338929_ANC_476.root";
+      f = "./AMS/SPS/Combine_run_1416338929_ANC_476.root";
       break;
     case photon:
-      f = "./Data/Root_Data/Combine_run_1416276173_ANC_451.root";
+      f = "./AMS/SPS/Combine_run_1416276173_ANC_451.root";
       break;
   }
   Conf::LoadInput(f);
@@ -51,8 +51,8 @@ void test()
 
 //-------------------------------------------------------------------
 void CombineAllAMSSPS(){
-  ifstream f_0("./DATA/sci/AMS/SPS/Root_Data/GoodRunList_Side0.log");
-  ifstream f_1("./DATA/sci/AMS/SPS/Root_Data/GoodRunList_Side1.log");
+  ifstream f_0("./AMS/GoodRunList_Side0.log");
+  ifstream f_1("./AMS/GoodRunList_Side1.log");
   char name0[256],name1[256];
 
   while((!f_0.eof()) && (!f_1.eof())){

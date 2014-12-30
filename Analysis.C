@@ -302,13 +302,13 @@ bool AMSSPS(TString f0="run_1416155587_ANC_387.root",TString f1="run_1416155589_
   if(Conf::ExHall != Conf::SPS){
     return MyException(Error::NotSPS);
   }
-  TString MyPath = Conf::Path+"/DATA/combineAll";
+  TString MyPath = "./AMS";
   TString tf0 = file_s0,tf1 = file_s1;
   if(tf0.Remove(0,tf0.Length()-13) != tf1.Remove(0,tf1.Length()-13)){
     return MyException(Error::CombineAMS_RunID_NotMatch);
   }else{
-    tf0 = MyPath+"/Root_Data_side0/"+file_s0;
-    tf1 = MyPath+"/Root_Data_side1/"+file_s1;
+    tf0 = MyPath+"/SPS_side0/"+file_s0;
+    tf1 = MyPath+"/SPS_side1/"+file_s1;
   }
   TFile *f_s0 = new TFile(tf0,"READ");
   tree_s0 = (TTree*)(f_s0->Get(AMSTreeName));
@@ -330,7 +330,7 @@ bool AMSSPS(TString f0="run_1416155587_ANC_387.root",TString f1="run_1416155589_
 
   // output
   Event *event_01 = new Event();
-  TString name = MyPath+"/Root_Data/Combine_"+file_s1;
+  TString name = MyPath+"/SPS/Combine_"+file_s1;
   TFile *f_01 = new TFile(name,"RECREATE");
   TTree *tree_01 = new TTree(AMSTreeName,"Cluster tree");
   tree_01->Branch(AMSBranchName,"Event",&event_01,32000,2);
@@ -370,7 +370,7 @@ bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141115_131911_Hits.root",
   file_s1 = file_name_ANC;
   file_s2 = file_name_DAMPE;
 
-  TString MyPath = Conf::Path+"/combineAll";
+  TString MyPath = "./Rec0";
   TString tf0 = file_s0;    // AMS
   TString tf1 = file_s1;    // ANC
   TString tf2 = file_s2;    // DAMPE
@@ -586,7 +586,7 @@ namespace Alignment{
 // *
 // *  TODO: ios has not be declared
 // *
-  TString outFilename = Conf::Path+"Root_Data/"+Conf::File+"_align.txt";
+  TString outFilename = "./Calibration/AMS/"+Conf::File+"_align.txt";
   //ofstream output(outFilename,ios::out | iso::app);
   //output<<"ladder id\tmean\terror";
 
