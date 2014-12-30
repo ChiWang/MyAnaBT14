@@ -3,7 +3,7 @@
 
 void Run(){
   FileStat_t x;
-  TString libName = "libMyAnalysis";
+  TString libName = "libMyCombine";
   if(gSystem->GetPathInfo(libName,x)){
     //gROOT->ProcessLine(".include $DMPSWSYS/include"); // same as the next line
     gInterpreter->AddIncludePath("$DMPSWSYS/include");
@@ -11,7 +11,7 @@ void Run(){
     //gSystem->Load("$DMPSWSYS/lib/libDmpKernel.so");
     //gSystem->Load("$DMPSWWORK/lib/libDmpEvtAms.so");
     //gSystem->Load("$DMPSWWORK/lib/libDmpEventRaw.so");
-    gSystem->CompileMacro("./Analysis.C","k",libName);
+    gSystem->CompileMacro("./MyCombine.C","k",libName);
   }else{
     gSystem->Load(libName);
   }

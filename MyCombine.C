@@ -71,7 +71,7 @@ namespace EnableCut{
     st += 0;
   }
 
-  ofstream logOut("test.log");
+  ofstream logOut("MyCombine.log",ios::app);
   TString Path = "./DATA/";
   short ExHall = SPS;// or PS
 // *
@@ -440,7 +440,7 @@ bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
   // event loop, combine DAMPE, AMS, ANC
   Conf::entries = tree_s2->GetEntries();
   Conf::logOut<<name<<"\tevents = "<<Conf::entries<<std::endl;
-  cut<<name<<"\tevents = "<<Conf::entries<<std::endl;
+  cout<<name<<"\tevents = "<<Conf::entries<<std::endl;
   for(Conf::evtID = 0;Conf::evtID<Conf::entries;++Conf::evtID){
     tree_s0->GetEntry(Conf::evtID);
     tree_s1->GetEntry(Conf::evtID);
