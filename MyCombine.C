@@ -28,14 +28,11 @@
 #include <vector>
 #include <map>
 //#include <fstream>
-/*
 #include "DmpEvtBTAnc.h"
 #include "DmpEvtBgoHits.h"
 #include "DmpEvtHeader.h"
-*/
-#include "DmpEvtHeader.h"
 #include "DmpEvtNudHits.h"
-#include "DmpEvtRec0.h"
+//#include "DmpEvtRec0.h"
 //#include "DmpRoootIOSvc.h"
 
 #define NLadder 5
@@ -427,22 +424,23 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
   file_name_DAMPE.Replace(file_name_DAMPE.Length()-9,4,"Rec0");
   TString name = MyPath+"/ALL/DAMPE_AMS_ANC_"+file_name_DAMPE;
   TFile *f_out = new TFile(name,"RECREATE");
-  TTree *tree_out = new TTree("Event","Event");
+  f_out->mkdir("Event");
+  TTree *tree_out = new TTree("Rec0","Rec0");
   tree_out->SetAutoSave(50000000);
 
   //output
   DmpEvtHeader *evt_Header = new DmpEvtHeader();
   tree_out->Branch("Header",evt_Header->GetName(),&evt_Header,32000,2);
-  DmpEvtRec0 *evt_Rec0 = new DmpEvtRec0();
-  tree_out->Branch("Rec0",evt_Rec0->GetName(),&evt_Rec0,32000,2);
-  /*
+  //DmpEvtRec0 *evt_Rec0 = new DmpEvtRec0();
+  //tree_out->Branch("Rec0",evt_Rec0->GetName(),&evt_Rec0,32000,2);
   DmpEvtBgoHits *evt_Bgo = new DmpEvtBgoHits();
   DmpEvtPsdHits *evt_Psd = new DmpEvtPsdHits();
+  DmpEvtNudHits *evt_Nud = new DmpEvtNudHits();
   DmpEvtBTAnc *evt_Anc = new DmpEvtBTAnc();
   tree_out->Branch("Bgo",evt_Bgo->GetName(),&evt_Bgo,32000,2);
   tree_out->Branch("Psd",evt_Psd->GetName(),&evt_Psd,32000,2);
+  tree_out->Branch("Nud",evt_Nud->GetName(),&evt_Nud,32000,2);
   tree_out->Branch("Anc",evt_Anc->GetName(),&evt_Anc,32000,2);
-  */
 
   // event loop, combine DAMPE, AMS, ANC
   Conf::entries = tree_s2->GetEntries();
@@ -451,10 +449,11 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
     tree_s1->GetEntry(Conf::evtID);
     tree_s2->GetEntry(Conf::evtID);
     evt_Header->LoadFrom(event_Header);
-    evt_Rec0->Bgo->LoadFrom(event_BgoHits);
-    evt_Rec0->Psd->LoadFrom(event_PsdHits);
+    evt_Bgo->LoadFrom(event_BgoHits);
+    evt_Psd->LoadFrom(event_PsdHits);
     for(unsigned int iNud=0;iNud<4;++iNud){
-      evt_Rec0->Nud[iNud] = event_NudHits->fEnergy.at(iNud);
+      evt_Nud->fChannelID.push_back(iNud);
+      evt_Nud->fEnergy.push_back(event_NudHits->fEnergy.at(iNud));
     }
     /*
     cout<<" i = "<<Conf::evtID<<endl;
@@ -468,29 +467,30 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
     }
     cout<<endl;
     */
-    evt_Rec0->Anc->fAMSCls->AbsorbObjects(event_AMS->Cls);
+    evt_Anc->fAMSCls->AbsorbObjects(event_AMS->Cls);
     //evt_Anc->fAMSCls = (TClonesArray*)event_AMS->Cls->Clone();
-    int ClsSize = evt_Rec0->Anc->fAMSCls->GetEntriesFast();
+    int ClsSize = evt_Anc->fAMSCls->GetEntriesFast();
     for(int xx=0;xx<ClsSize;++xx){
-      Cluster *aC = (Cluster*)evt_Rec0->Anc->fAMSCls->At(xx);
+      Cluster *aC = (Cluster*)evt_Anc->fAMSCls->At(xx);
       aC->ladder = LadderInOrder(aC->ladder);
     }
-    evt_Rec0->Anc->fAdcC1 = V792[0][1];
-    evt_Rec0->Anc->fAdcC2 = V792[0][9];
-    evt_Rec0->Anc->fAdcPbGlass = V792[0][3];
-    evt_Rec0->Anc->fAdcSc1 = V792[0][4];
-    evt_Rec0->Anc->fAdcSc2 = V792[0][5];
-    evt_Rec0->Anc->fAdcSc3 = V792[0][8];
-    evt_Rec0->Anc->fAdcSc4 = V792[0][7];
-    evt_Rec0->Anc->fAdcSd1 = V792[0][11];
-    evt_Rec0->Anc->fAdcSd2 = V792[0][12];
+    evt_Anc->fAdcC1 = V792[0][1];
+    evt_Anc->fAdcC2 = V792[0][9];
+    evt_Anc->fAdcPbGlass = V792[0][3];
+    evt_Anc->fAdcSc1 = V792[0][4];
+    evt_Anc->fAdcSc2 = V792[0][5];
+    evt_Anc->fAdcSc3 = V792[0][8];
+    evt_Anc->fAdcSc4 = V792[0][7];
+    evt_Anc->fAdcSd1 = V792[0][11];
+    evt_Anc->fAdcSd2 = V792[0][12];
     tree_out->Fill();
     evt_Header->Reset();
-    evt_Rec0->Bgo->Reset();
-    evt_Rec0->Psd->Reset();
-    evt_Rec0->Anc->Reset();
+    evt_Bgo->Reset();
+    evt_Psd->Reset();
+    evt_Anc->Reset();
   }
 
+  f_out->cd("Event");
   tree_out->Write("",TObject::kOverwrite);
   f_out->Close();
 //-------------------------------------------------------------------
@@ -503,7 +503,7 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
   delete event_BgoHits;
   delete event_PsdHits;
   delete event_NudHits;
-  delete evt_Rec0;
+  //delete evt_Rec0;
   return Conf::entries;
 }
 };
