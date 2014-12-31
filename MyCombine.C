@@ -14,19 +14,15 @@
 
 #include "TFile.h"
 #include "TTree.h"
-//#include "TSystem.h"
 
 #include "Event.hh"
 #include <iostream>
-//#include <vector>
-//#include <map>
 #include "DmpEvtBTAnc.h"
 #include "DmpEvtBgoHits.h"
 #include "DmpEvtHeader.h"
 #include "DmpEvtNudHits.h"
 //#include "DmpRoootIOSvc.h"
 
-//#define NLadder 5
 #define AMSTreeName "t4"
 #define AMSBranchName "cluster_branch"
 #define ANCTreeName "AncillaryEvent"
@@ -112,6 +108,8 @@ short LadderInOrder(int ladderID){
 
 //-------------------------------------------------------------------
 long AMSSPS(TString file_s0="run_1416155587_ANC_387.root",TString file_s1="run_1416155589_ANC_387.root"){
+cout<<endl;
+  cout<<"\nProcessing\t"<<file_s0<<"\t"<<file_s1<<endl;
   if(Conf::ExHall != Conf::SPS){
     return MyException(Error::NotSPS);
   }
@@ -185,6 +183,7 @@ long AMSSPS(TString file_s0="run_1416155587_ANC_387.root",TString file_s1="run_1
 //-------------------------------------------------------------------
 //bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141115_131911_Hits.root", TString file_name_AMS="Combine_run_1416053170_ANC_357.root", TString file_name_ANC="VMEAncillary_Data_357.root"){
 long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root", TString file_name_AMS="Combine_run_1416053170_ANC_357.root", TString file_name_ANC="VMEAncillary_Data_357.root"){
+  cout<<"\nProcessing\t"<<file_name_DAMPE<<"\t"<<file_name_AMS<<"\t"<<file_name_ANC<<endl;
 
   TString tf0 = file_name_AMS;    // AMS
   TString tf1 = file_name_ANC;    // ANC
@@ -233,9 +232,10 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
   tree_s2->SetBranchAddress("EventHeader",&event_Header);
 
 //-------------------------------------------------------------------
-  file_name_DAMPE.Remove(0,9);
-  file_name_DAMPE.Replace(file_name_DAMPE.Length()-9,4,"Rec0");
-  TString name = Conf::Path::ALLCombine+"DAMPE_AMS_ANC_"+file_name_DAMPE;
+  TString ouputFile = file_name_DAMPE;
+  ouputFile = ouputFile.Remove(0,9);
+  ouputFile.Replace(ouputFile.Length()-9,4,"Rec0");
+  TString name = Conf::Path::ALLCombine+"DAMPE_AMS_ANC_"+ouputFile;
   TFile *f_out = new TFile(name,"RECREATE");
   f_out->mkdir("Event");
   TTree *tree_out = new TTree("Rec0","Rec0");
