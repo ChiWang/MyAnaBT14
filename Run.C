@@ -22,7 +22,7 @@ void CombineAMSSPS()
 {
   ifstream f_0("./AMS/GoodRunList_Side0.log");
   ifstream f_1("./AMS/GoodRunList_Side1.log");
-  ofstream logOut("CombineAMSSPS.log");
+  ofstream logOut("./AMS/CombineSPS.log");
   logOut<<"file side0\tfile side1\tevents"<<endl;
   char name0[256],name1[256];
 
@@ -41,7 +41,7 @@ void CombineAMSSPS()
 void CombineAll()
 {
   ifstream f_0("./Rec0/Match.log");
-  ofstream logOut("CombineAll.log");
+  ofstream logOut("./Rec0/CombineAll.log");
   logOut<<"file_dampe\tfile_ams\tfile_anc\tevents"<<endl;
   char tmp[256];
 

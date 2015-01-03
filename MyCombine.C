@@ -45,7 +45,7 @@ namespace Conf{
 namespace Path{
   TString AMS_Side0 = "./AMS/SPS_side0/";
   TString AMS_Side1 = "./AMS/SPS_side1/";
-  TString AMS_Out = "./AMS/";
+  TString AMS_Out = "./AMS/SPS/";
   TString Sub_AMS = "./Rec0/AMS/";
   TString Sub_ANC = "./Rec0/ANC/";
   TString Sub_DAMPE = "./Rec0/DAMPE/";
