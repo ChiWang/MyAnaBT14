@@ -42,6 +42,7 @@ namespace Conf{
   short ExHall = SPS;// or PS
   long     entries = -1;
   long     evtID = -1;
+  TString  outFileName="";
 namespace Path{
   TString AMS_Side0 = "./AMS/SPS_side0/";
   TString AMS_Side1 = "./AMS/SPS_side1/";
@@ -88,8 +89,9 @@ short LadderInOrder(int ladderID){
       n = ladderID;
     }else{
       n = 7-ladderID;
-      if(n != 2 || n != 3 || n!=4){
+      if(n != 2 && n != 3 && n!=4){
         cout<<"ERROR: ladder "<<ladderID<<" not exist at "<<Conf::ExHall<<endl;
+        n = -1;
       }
     }
   }else if(Conf::ExHall == Conf::SPS){
@@ -100,10 +102,29 @@ short LadderInOrder(int ladderID){
       n = ladderID-12;
       if(n != 0 && n !=1){
         cout<<"ERROR: ladder "<<ladderID<<" not exist at "<<Conf::ExHall<<endl;
+        n = -1;
       }
     }
   }
   return n;
+}
+
+//-------------------------------------------------------------------
+void ConstructOutFileName(TString Dmp_tag,TString Anc_tag){
+  Conf::outFileName = "Rec0_H";
+  Conf::outFileName +=Conf::ExHall;
+  Anc_tag.Remove(Anc_tag.Length()-5,5);
+  Anc_tag.Remove(0,18);
+  if(Anc_tag.Sizeof() == 3){
+    Anc_tag = "-ANC_0"+Anc_tag;
+  }else{
+    Anc_tag = "-ANC_"+Anc_tag;
+  }
+  Conf::outFileName += Anc_tag;
+  //Dmp_tag = Dmp_tag.Replace(0,9,"DMP_");
+  Dmp_tag.Replace(0,9,"_DMP_");
+  Dmp_tag.Remove(Dmp_tag.Length()-10,5);
+  Conf::outFileName += Dmp_tag;
 }
 
 //-------------------------------------------------------------------
@@ -232,11 +253,8 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
   tree_s2->SetBranchAddress("EventHeader",&event_Header);
 
 //-------------------------------------------------------------------
-  TString ouputFile = file_name_DAMPE;
-  ouputFile = ouputFile.Remove(0,9);
-  ouputFile.Replace(ouputFile.Length()-9,4,"Rec0");
-  TString name = Conf::Path::ALLCombine+"DAMPE_AMS_ANC_"+ouputFile;
-  TFile *f_out = new TFile(name,"RECREATE");
+  ConstructOutFileName(file_name_DAMPE,file_name_ANC);
+  TFile *f_out = new TFile(Conf::Path::ALLCombine+Conf::outFileName,"RECREATE");
   f_out->mkdir("Event");
   TTree *tree_out = new TTree("Rec0","Rec0");
   tree_out->SetAutoSave(50000000);
@@ -274,6 +292,9 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
     for(int xx=0;xx<ClsSize;++xx){
       Cluster *aC = (Cluster*)evt_Anc->fAMSCls->At(xx);
       aC->ladder = LadderInOrder(aC->ladder);
+      if(aC->ladder == -1){
+        return -5;
+      }
     }
     evt_Anc->fAdcC1 = V792[0][1];
     evt_Anc->fAdcC2 = V792[0][9];
@@ -289,7 +310,6 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
     evt_Bgo->Reset();
     evt_Psd->Reset();
     evt_Anc->Reset();
-    if(Conf::evtID%(Conf::entries / 5) == 0)cout<<".";
   }
 
   f_out->cd("Event");
@@ -311,7 +331,7 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
   delete evt_Psd;
   delete evt_Header;
   //delete evt_Rec0;
-  cout<<Conf::entries<<endl;
+  cout<<"====>\t"<<Conf::outFileName<<"\t"<<Conf::entries<<endl;
   return Conf::entries;
 }
 };

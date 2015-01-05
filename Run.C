@@ -45,15 +45,30 @@ void CombineAll()
   logOut<<"file_dampe\tfile_ams\tfile_anc\tevents"<<endl;
   char tmp[256];
 
+  bool beg=false;
   do{
     f_0.getline(tmp,256);
     istringstream aLine(tmp);
     TString dampe_file="", ams_file="", anc_file="";
     aLine>>dampe_file>>ams_file>>anc_file;
+    if(dampe_file.Contains("Begin")){
+      beg = true;
+    }
+    if(!beg){
+            continue;
+    }
+    if(dampe_file.Contains("END")){
+            break;
+    }
     if(dampe_file.Contains(".root")&& ams_file.Contains(".root") && anc_file.Contains(".root")){
+      if(ams_file.Contains("Combine")){
+        CombineData::Conf::ExHall = CombineData::Conf::SPS;
+      }else{
+        CombineData::Conf::ExHall = CombineData::Conf::PS;
+      }
       long nEvt = CombineData::DAMPE_AMS_ANC(dampe_file,ams_file,anc_file);
       if(nEvt > 0){
-        logOut<<dampe_file<<"\t"<<ams_file<<"\t"<<anc_file<<"\t"<<nEvt<<endl;
+        logOut<<CombineData::Conf::outFileName<<"\t"<<nEvt<<endl;
       }
     }
   }while(!f_0.eof());
