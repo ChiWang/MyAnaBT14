@@ -38,6 +38,43 @@ void CombineAMSSPS()
 }
 
 //-------------------------------------------------------------------
+void CombineAMSANC()
+{
+  ifstream f_0("./Rec0/AMS_ANC/match.log");
+  ofstream logOut("./Rec0/AMS_ANC/Combine_AMSANC.log");
+  logOut<<"file_ams\tfile_anc\tevents"<<endl;
+  char tmp[256];
+  //CombineData::Conf::Path::ALLCombine = "./Test/";
+
+  bool beg=false;
+  do{
+    f_0.getline(tmp,256);
+    istringstream aLine(tmp);
+    TString ams_file="", anc_file="";
+    aLine>>ams_file>>anc_file;
+    if(ams_file.Contains("Begin")){
+      beg = true;
+    }
+    if(!beg){
+            continue;
+    }
+    if(ams_file.Contains("END")){
+            break;
+    }
+    if(ams_file.Contains(".root") && anc_file.Contains(".root")){
+      if(ams_file.Contains("Combine")){
+        CombineData::Conf::ExHall = CombineData::Conf::SPS;
+      }else{
+        CombineData::Conf::ExHall = CombineData::Conf::PS;
+      }
+      long nEvt = CombineData::AMS_ANC(ams_file,anc_file);
+      logOut<<CombineData::Conf::outFileName<<"\t"<<nEvt<<endl;
+    }
+  }while(!f_0.eof());
+  logOut.close();
+}
+
+//-------------------------------------------------------------------
 void CombineAll()
 {
   ifstream f_0("./Rec0/Match.log");
@@ -67,13 +104,9 @@ void CombineAll()
         CombineData::Conf::ExHall = CombineData::Conf::PS;
       }
       long nEvt = CombineData::DAMPE_AMS_ANC(dampe_file,ams_file,anc_file);
-      if(nEvt > 0){
-        logOut<<CombineData::Conf::outFileName<<"\t"<<nEvt<<endl;
-      }
+      logOut<<CombineData::Conf::outFileName<<"\t"<<nEvt<<endl;
     }
   }while(!f_0.eof());
   logOut.close();
 }
-
-
 

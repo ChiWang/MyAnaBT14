@@ -65,19 +65,18 @@ enum Type{
 };
 
 //-------------------------------------------------------------------
-int MyException(short type,TString argv1=""){
+void MyException(short type){
   switch (type) {
     case Error::CombineAMS_RunID_NotMatch:
-      cout<<"ERROR:  run ID not match: "<<argv1<<endl;
+      cout<<"ERROR:  run ID not match: ";
       break;
     case Error::Entries_NotMatch:
-      cout<<"ERROR:  entries not match: "<<argv1<<endl;
+      cout<<"ERROR:  entries not match: ";
       break;
     case Error::NotSPS:
       cout<<"ERROR:  Conf::ExHall is not SPS..."<<endl;
       break;
   }
-  return type;
 }
 
 //-------------------------------------------------------------------
@@ -91,7 +90,7 @@ short LadderInOrder(int ladderID){
       n = 7-ladderID;
       if(n != 2 && n != 3 && n!=4){
         cout<<"ERROR: ladder "<<ladderID<<" not exist at "<<Conf::ExHall<<endl;
-        n = -1;
+        n = 0-(Conf::ExHall*1000+ladderID);
       }
     }
   }else if(Conf::ExHall == Conf::SPS){
@@ -102,7 +101,7 @@ short LadderInOrder(int ladderID){
       n = ladderID-12;
       if(n != 0 && n !=1){
         cout<<"ERROR: ladder "<<ladderID<<" not exist at "<<Conf::ExHall<<endl;
-        n = -1;
+        n = 0-(Conf::ExHall*1000+ladderID);
       }
     }
   }
@@ -132,11 +131,14 @@ long AMSSPS(TString file_s0="run_1416155587_ANC_387.root",TString file_s1="run_1
 cout<<endl;
   cout<<"\nProcessing\t"<<file_s0<<"\t"<<file_s1<<endl;
   if(Conf::ExHall != Conf::SPS){
-    return MyException(Error::NotSPS);
+    MyException(Error::NotSPS);
+    return  Error::NotSPS; 
   }
   TString tf0 = file_s0,tf1 = file_s1;
   if(tf0.Remove(0,tf0.Length()-13) != tf1.Remove(0,tf1.Length()-13)){
-    return MyException(Error::CombineAMS_RunID_NotMatch,tf0+"   "+tf1);
+    MyException(Error::CombineAMS_RunID_NotMatch);
+    cout<<file_s0<<"\t"<<file_s1<<endl;
+    return Error::CombineAMS_RunID_NotMatch;
   }else{
     tf0 = Conf::Path::AMS_Side0+file_s0;
     tf1 = Conf::Path::AMS_Side1+file_s1;
@@ -152,10 +154,13 @@ cout<<endl;
     return Error::OpenFileError;
   }
   TTree *tree_s1 = (TTree*)(f_s1->Get(AMSTreeName));
-  if(tree_s1->GetEntries() != Conf::entries){
+  long eti = tree_s1->GetEntries();
+  if(eti != Conf::entries){
     delete f_s0;
     delete f_s1;
-    return MyException(Error::Entries_NotMatch,file_s0+" "+tree_s0->GetEntries()+"\t"+file_s1+" "+tree_s1->GetEntries());
+    MyException(Error::Entries_NotMatch);
+    cout<<file_s0<<" "<<Conf::entries<<"\t"<<file_s1<<" "<<eti<<endl;
+    return Error::Entries_NotMatch;
   }
 
   Event *event_s0 = new Event();
@@ -202,6 +207,93 @@ cout<<endl;
 }
 
 //-------------------------------------------------------------------
+long AMS_ANC(TString file_name_AMS="Combine_run_1416053170_ANC_357.root", TString file_name_ANC="VMEAncillary_Data_357.root"){
+  cout<<"\nProcessing\t"<<file_name_AMS<<"\t"<<file_name_ANC<<endl;
+
+  TString tf0 = file_name_AMS;    // AMS
+  TString tf1 = file_name_ANC;    // ANC
+  if(tf0.Remove(0,tf0.Length()-8) != tf1.Remove(0,tf1.Length()-8)){
+    MyException(Error::CombineAMS_RunID_NotMatch);
+    cout<<file_name_AMS<<"\t"<<file_name_ANC<<endl;
+    return Error::CombineAMS_RunID_NotMatch;
+  }else{
+    tf0 = Conf::Path::Sub_AMS+file_name_AMS;
+    tf1 = Conf::Path::Sub_ANC+file_name_ANC;
+  }
+  TFile *f_s0 = TFile::Open(tf0,"READ");
+  if(!f_s0){
+    return Error::OpenFileError;
+  }
+  TTree *tree_s0 = (TTree*)(f_s0->Get(AMSTreeName));
+  long AMS_entries = tree_s0->GetEntries();
+  TFile *f_s1 = TFile::Open(tf1,"READ");
+  if(!f_s1){
+    return Error::OpenFileError;
+  }
+  TTree *tree_s1 = (TTree*)(f_s1->Get(ANCTreeName));
+  long et2 = tree_s1->GetEntries();
+  if(et2 != AMS_entries){
+    MyException(Error::Entries_NotMatch);
+    cout<<file_name_AMS<<" "<<AMS_entries<<"\t"<<file_name_ANC<<" "<<et2<<endl;
+    return Error::Entries_NotMatch;
+  }
+
+  // input
+  Event *event_AMS = new Event();
+  Int_t V792[1][32];
+  tree_s0->SetBranchAddress(AMSBranchName,&event_AMS);
+  tree_s1->SetBranchAddress("V792",V792);
+
+//-------------------------------------------------------------------
+  ConstructOutFileName("A2Data00_20140000_000000_Hits.root",file_name_ANC);
+  TFile *f_out = new TFile(Conf::Path::ALLCombine+"AMS_ANC/"+Conf::outFileName,"RECREATE");
+  f_out->mkdir("Event");
+  TTree *tree_out = new TTree("Rec0","Rec0");
+  tree_out->SetAutoSave(50000000);
+
+  //output
+  DmpEvtBTAnc *evt_Anc = new DmpEvtBTAnc();
+  tree_out->Branch("Anc",evt_Anc->GetName(),&evt_Anc,32000,2);
+
+  // event loop, combine DAMPE, AMS, ANC
+  Conf::entries = tree_s0->GetEntries();
+  for(Conf::evtID = 0;Conf::evtID<Conf::entries;++Conf::evtID){
+    tree_s0->GetEntry(Conf::evtID);
+    tree_s1->GetEntry(Conf::evtID);
+    int ClsSize = event_AMS->Cls->GetEntriesFast();
+    for(int xx=0;xx<ClsSize;++xx){
+      Cluster *aC = (Cluster*)event_AMS->Cls->At(xx);
+      aC->ladder = LadderInOrder(aC->ladder);
+      if(aC->ladder < 0){
+        return aC->ladder;
+      }
+    }
+    evt_Anc->fAMSCls->AbsorbObjects(event_AMS->Cls);
+    evt_Anc->fAdcC1 = V792[0][1];
+    evt_Anc->fAdcC2 = V792[0][9];
+    evt_Anc->fAdcPbGlass = V792[0][3];
+    evt_Anc->fAdcSc1 = V792[0][4];
+    evt_Anc->fAdcSc2 = V792[0][5];
+    evt_Anc->fAdcSc3 = V792[0][8];
+    evt_Anc->fAdcSc4 = V792[0][7];
+    evt_Anc->fAdcSd1 = V792[0][11];
+    evt_Anc->fAdcSd2 = V792[0][12];
+    tree_out->Fill();
+    //if(Conf::evtID > 3){break;}
+  }
+
+  f_out->cd("Event");
+  tree_out->Write("",TObject::kOverwrite);
+  f_out->Close();
+//-------------------------------------------------------------------
+
+  delete event_AMS;
+  delete evt_Anc;
+  cout<<"====>\t"<<Conf::outFileName<<"\t"<<Conf::entries<<endl;
+  return Conf::entries;
+}
+
+//-------------------------------------------------------------------
 //bool DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141115_131911_Hits.root", TString file_name_AMS="Combine_run_1416053170_ANC_357.root", TString file_name_ANC="VMEAncillary_Data_357.root"){
 long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root", TString file_name_AMS="Combine_run_1416053170_ANC_357.root", TString file_name_ANC="VMEAncillary_Data_357.root"){
   cout<<"\nProcessing\t"<<file_name_DAMPE<<"\t"<<file_name_AMS<<"\t"<<file_name_ANC<<endl;
@@ -210,7 +302,9 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
   TString tf1 = file_name_ANC;    // ANC
   TString tf2 = file_name_DAMPE;    // DAMPE
   if(tf0.Remove(0,tf0.Length()-8) != tf1.Remove(0,tf1.Length()-8)){
-    return MyException(Error::CombineAMS_RunID_NotMatch,tf0+"  "+tf1);
+    MyException(Error::CombineAMS_RunID_NotMatch);
+    cout<<file_name_AMS<<"\t"<<file_name_ANC<<endl;
+    return Error::CombineAMS_RunID_NotMatch;
   }else{
     tf0 = Conf::Path::Sub_AMS+file_name_AMS;
     tf1 = Conf::Path::Sub_ANC+file_name_ANC;
@@ -227,10 +321,13 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
     return Error::OpenFileError;
   }
   TTree *tree_s1 = (TTree*)(f_s1->Get(ANCTreeName));
-  if(tree_s1->GetEntries() != AMS_entries){
+  long etx = tree_s1->GetEntries();
+  if(etx != AMS_entries){
     delete f_s0;
     delete f_s1;
-    return MyException(Error::Entries_NotMatch,file_name_AMS+" "+AMS_entries+"\t"+file_name_ANC+" "+tree_s1->GetEntries());
+    MyException(Error::Entries_NotMatch);
+    cout<<file_name_AMS<<" "<<AMS_entries<<"\t"<<file_name_ANC<<" "<<etx<<endl;
+    return Error::Entries_NotMatch;
   }
   TFile *f_s2 = TFile::Open(tf2,"READ");
   if(!f_s2){
@@ -262,8 +359,6 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
   //output
   DmpEvtHeader *evt_Header = new DmpEvtHeader();
   tree_out->Branch("Header",evt_Header->GetName(),&evt_Header,32000,2);
-  //DmpEvtRec0 *evt_Rec0 = new DmpEvtRec0();
-  //tree_out->Branch("Rec0",evt_Rec0->GetName(),&evt_Rec0,32000,2);
   DmpEvtBgoHits *evt_Bgo = new DmpEvtBgoHits();
   DmpEvtPsdHits *evt_Psd = new DmpEvtPsdHits();
   DmpEvtNudHits *evt_Nud = new DmpEvtNudHits();
@@ -292,8 +387,8 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
     for(int xx=0;xx<ClsSize;++xx){
       Cluster *aC = (Cluster*)evt_Anc->fAMSCls->At(xx);
       aC->ladder = LadderInOrder(aC->ladder);
-      if(aC->ladder == -1){
-        return -5;
+      if(aC->ladder < 0){
+        return aC->ladder;
       }
     }
     evt_Anc->fAdcC1 = V792[0][1];
@@ -330,7 +425,6 @@ long DAMPE_AMS_ANC(TString file_name_DAMPE="A2Data00_20141118_154848_Hits.root",
   delete evt_Nud;
   delete evt_Psd;
   delete evt_Header;
-  //delete evt_Rec0;
   cout<<"====>\t"<<Conf::outFileName<<"\t"<<Conf::entries<<endl;
   return Conf::entries;
 }
